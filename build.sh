@@ -52,11 +52,6 @@ if [ ! -x "$TOOLS/7zz" ]; then
   dl "$TOOLS/7z.tar.xz" "https://www.7-zip.org/a/7z2602-linux-x64.tar.xz"
   (cd "$TOOLS" && (tar xf 7z.tar.xz 2>/dev/null || bsdtar -xf 7z.tar.xz) && chmod +x 7zz)
 fi
-if [ ! -x "$TOOLS/innoextract-1.9-linux/bin/amd64/innoextract" ]; then
-  echo "== 下载 innoextract =="
-  dl "$TOOLS/innoextract.tar.xz" "https://github.com/dscharrer/innoextract/releases/download/1.9/innoextract-1.9-linux.tar.xz"
-  (cd "$TOOLS" && (tar xf innoextract.tar.xz 2>/dev/null || bsdtar -xf innoextract.tar.xz) && chmod +x innoextract-1.9-linux/bin/amd64/innoextract)
-fi
 if [ ! -x "$TOOLS/appimagetool.AppImage" ]; then
   echo "== 下载 appimagetool =="
   dl "$TOOLS/appimagetool.AppImage" "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
@@ -65,13 +60,12 @@ fi
 # runtime 由 appimagetool 按目标架构自动下载（type2-runtime，支持 zstd）
 
 SZ="$TOOLS/7zz"
-INNOEXTRACT="$TOOLS/innoextract-1.9-linux/bin/amd64/innoextract"
 APPIMAGETOOL="$TOOLS/appimagetool.AppImage"
 
 # ---------- 原始包（freearchives/）----------
 [ -f "$ARCHIVES/typora_${VER_TYPORA}_amd64.deb" ] || { echo "❌ 缺 freearchives/typora_${VER_TYPORA}_amd64.deb"; exit 1; }
 [ -f "$ARCHIVES/typora_${VER_TYPORA}_arm64.deb" ] || { echo "❌ 缺 freearchives/typora_${VER_TYPORA}_arm64.deb"; exit 1; }
-[ -f "$ARCHIVES/typora-setup-x64-${VER_TYPORA}.exe" ] || { echo "❌ 缺 freearchives/typora-setup-x64-${VER_TYPORA}.exe"; exit 1; }
+[ -f "$ARCHIVES/typora-win-x64-${VER_TYPORA}.zip" ] || { echo "❌ 缺 freearchives/typora-win-x64-${VER_TYPORA}.zip"; exit 1; }
 
 # ---------- 1. 确定 plugin 源与版本标识 ----------
 if [ -n "$PLUGIN_VER" ]; then
@@ -178,13 +172,12 @@ assemble_appdir aarch64 "$ARCHIVES/typora_${VER_TYPORA}_arm64.deb" "$TMP/Typora-
 "$APPIMAGETOOL" "$TMP/Typora-arm64.AppDir" "$ARM_APPIMAGE" >/dev/null 2>&1
 echo "✅ $ARM_APPIMAGE"
 
-# ---------- 5. Windows x64 zip ----------
+# ---------- 5. Windows x64 zip（从 freearchives 的 win zip 解压 → 注入 plugin → 重新打包）----------
 echo "== 构建 Windows x64 zip =="
+WIN_SRC="$ARCHIVES/typora-win-x64-${VER_TYPORA}.zip"
 WIN="$TMP/win_extract/app"
-if [ ! -f "$WIN/Typora.exe" ]; then
-  rm -rf "$TMP/win_extract"
-  "$INNOEXTRACT" "$ARCHIVES/typora-setup-x64-${VER_TYPORA}.exe" -d "$TMP/win_extract" >/dev/null 2>&1
-fi
+rm -rf "$TMP/win_extract" && mkdir -p "$WIN"
+(cd "$TMP/win_extract" && "$SZ" x -y "$WIN_SRC" >/dev/null)
 inject_plugin "$WIN/resources"
 WIN_ZIP="$BUILD/Typora-${VER_TYPORA}-plugin-${PLUGIN_TAG}-amd64.zip"
 (cd "$TMP/win_extract" && "$SZ" a -tzip -mx=5 -y "$WIN_ZIP" app/ >/dev/null)
