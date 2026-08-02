@@ -28,6 +28,8 @@ TOOLS="$TMP/tools"
 BUILD="$ROOT/build"
 ARCHIVES="$ROOT/freearchives"
 VER_TYPORA="0.11.18"
+REPO_URL="git@github.com:liruohrh/typorax.git"
+BUILD_TIME="$(date -u +'%Y-%m-%d %H:%M UTC')"
 
 # ---------- 参数解析 ----------
 PLUGIN_VER=""
@@ -135,6 +137,12 @@ assemble_appdir() {  # $1=arch(x86_64|aarch64)  $2=deb  $3=AppDir
   (cd "$work" && bsdtar -xf "$deb" && bsdtar -xf data.tar.xz)
   cp -a "$work/usr/." "$appdir/usr/"
   cp "$work/usr/share/applications/typora.desktop" "$appdir/"
+  # 自定义名称与构建信息（Name=Typorax；Comment 含 Typora 版本/free/plugin 版本/构建时间/仓库）
+  sed -i \
+    -e "s|^Name=.*|Name=Typorax|" \
+    -e "s|^Comment=.*|Comment=Typora ${VER_TYPORA} free + typora_plugin ${PLUGIN_TAG} · built ${BUILD_TIME} · ${REPO_URL}|" \
+    -e "/Change Log/d" \
+    "$appdir/typora.desktop"
   cp "$work/usr/share/icons/hicolor/256x256/apps/typora.png" "$appdir/"
   inject_plugin "$appdir/usr/share/typora/resources"
   write_apprun "$appdir"
