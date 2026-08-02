@@ -45,15 +45,10 @@ tmpapps/                   工作目录（gitignore）：工具、plugin 源码�
 
 ## 输入法（fcitx5 / ibus）
 
-Typora 0.11.18 原生 Wayland 不支持 IME（Chromium 98 前限制），保持 X11/XWayland。
-系统需安装对应 GTK 前端模块（Arch: `sudo pacman -S fcitx5-gtk` / `ibus`），
-然后运行仓库内脚本配置 GTK im module：
+Typora 0.11.18 原生 Wayland 不支持 IME（Chromium 98 前的限制），保持 X11/XWayland
+渲染。若 fcitx5/ibus 无法输入，按以下两步在主机上配置（实测 Typora 二进制会丢弃
+AppRun 里 export 的环境变量，故用 GTK 配置文件而非环境变量）：
 
-```bash
-./setup-input-method.sh            # 自动检测 fcitx5 / ibus
-./setup-input-method.sh fcitx      # 手动指定
-./setup-input-method.sh --dry-run  # 预览
-```
-
-（写入 `~/.config/gtk-3.0/settings.ini` 的 `gtk-im-module=`；实测 Typora 二进制会
-丢弃 AppRun 里 export 的环境变量，故用配置文件而非环境变量。）
+1. 安装对应 GTK 前端模块：Arch/CachyOS `sudo pacman -S fcitx5-gtk`（ibus 则 `ibus`）
+2. 在 `~/.config/gtk-3.0/settings.ini` 的 `[Settings]` 段写入
+   `gtk-im-module=fcitx`（ibus 用户写 `ibus`），然后重启 Typora
