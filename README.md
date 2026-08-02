@@ -7,12 +7,25 @@ Linux amd64/arm64 AppImage + Windows x64 zip + macOS dmg。
 ## 目录结构
 
 ```
-freearchives/              原始包（git 管理）：deb（amd64/arm64）、Windows exe、dmg、zip
+freearchives/              原始包（Git LFS 管理）：deb（amd64/arm64）、Windows exe、dmg、zip
 build.sh                   统一构建脚本（本地与 CI 相同流程）
 .github/workflows/release.yml   GitHub Action：定时 + 手动发布
 build/                     构建产物（gitignore）
 tmpapps/                   工作目录（gitignore）：工具、plugin 源码、解包缓存
 ```
+
+## Git LFS
+
+`freearchives/` 下的原始包（约 222MB）用 [Git LFS](https://git-lfs.com) 管理，
+clone 前需要注册 LFS（每台机器一次）：
+
+```bash
+git lfs install   # 注册 LFS filter（写入 ~/.gitconfig）
+git clone git@github.com:liruohrh/typorax.git
+```
+
+未注册时 clone 会得到 LFS 指针文件（几十字节）而非真实大文件；已 clone 的可
+`git lfs pull` 补齐。GitHub 免费配额：1GB 存储 + 1GB/月带宽。
 
 ## 本地构建
 
@@ -28,7 +41,7 @@ tmpapps/                   工作目录（gitignore）：工具、plugin 源码�
 
 `.github/workflows/release.yml`：
 
-- **定时**（每小时）：检测 obgnail/typora_plugin 最新 release，有新版则构建并发布，tag `vplugin{插件版本}`（如 `vplugin1.19.0`）
+- **定时**（每天 UTC 0:30）：检测 obgnail/typora_plugin 最新 release，有新版则构建并发布，tag `vplugin{插件版本}`（如 `vplugin1.19.0`）
 - **手动**（workflow_dispatch）：可手动指定 `plugin_version` 和自定义 `release_tag`
 - 已存在的 tag 自动跳过；产物 `build/` 全部挂到 release
 
