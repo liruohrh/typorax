@@ -27,10 +27,18 @@ ingredients:
 script:
   # 覆盖 pkg2appimage 下载的默认 AppRun，用 --no-sandbox 启动 Typora。
   # 二进制位于 usr/share/typora/Typora（由 deb 解包得到）。
+  # 输入法：不在此设置任何 GTK_IM_MODULE / XMODIFIERS 等变量——会话环境
+  # 中有则自然继承（ibus/fcitx 用户各得其所），没有则交给 GTK 默认行为
+  # 或仓库内的 setup-input-method.sh 写入的 ~/.config/gtk-3.0/settings.ini
+  # （gtk-im-module=fcitx|ibus，GTK3 在 X11/XWayland 下始终读取）。
+  # 实测 Typora 0.11.18 (Electron 13) 启动时会丢弃 AppRun export 的变量，
+  # 因此环境变量方案本就无效，这里不做任何输入法假设。
   - cat > ./AppRun <<\EOF
   - #!/bin/sh
+  - # 不需要设置 LD_LIBRARY_PATH：Typora 的私有库（libffmpeg.so 等）与
+  - # 二进制同目录（usr/share/typora/），Electron 按自身路径加载；
+  - # 系统库（GTK3/NSS）由宿主 ldconfig 提供。
   - HERE="$(dirname "$(readlink -f "${0}")")"
-  - export LD_LIBRARY_PATH="${HERE}"/usr/lib:"${HERE}"/usr/lib/x86_64-linux-gnu:"${HERE}"/usr/lib/aarch64-linux-gnu:"${LD_LIBRARY_PATH}"
   - exec "${HERE}"/usr/share/typora/Typora --no-sandbox "$@"
   - EOF
   - chmod a+x ./AppRun
