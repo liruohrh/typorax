@@ -129,12 +129,29 @@ EOF
   chmod +x "$1/AppRun"
 }
 
+# 解压 deb（多工具回退：bsdtar / ar+tar / dpkg-deb，兼容 Arch 与 CI runner）
+extract_deb() {  # $1=deb  $2=输出目录
+  local deb="$1" out="$2" t
+  t="$(mktemp -d)"
+  if command -v bsdtar >/dev/null 2>&1; then
+    (cd "$t" && bsdtar -xf "$deb" && bsdtar -xf data.tar.*)
+  elif command -v ar >/dev/null 2>&1; then
+    (cd "$t" && ar x "$deb" && tar xf data.tar.*)
+  elif command -v dpkg-deb >/dev/null 2>&1; then
+    dpkg-deb -x "$deb" "$t"
+  else
+    echo "❌ 无可用 deb 解压工具（需要 bsdtar / ar / dpkg-deb）"; exit 1
+  fi
+  cp -a "$t/." "$out/"
+  rm -rf "$t"
+}
+
 assemble_appdir() {  # $1=arch(x86_64|aarch64)  $2=deb  $3=AppDir
   local arch="$1" deb="$2" appdir="$3" work="$TMP/work/$1"
   echo "== 组装 AppDir ($arch) =="
   rm -rf "$work" "$appdir"
   mkdir -p "$work" "$appdir/usr"
-  (cd "$work" && bsdtar -xf "$deb" && bsdtar -xf data.tar.xz)
+  extract_deb "$deb" "$work"
   cp -a "$work/usr/." "$appdir/usr/"
   cp "$work/usr/share/applications/typora.desktop" "$appdir/"
   # 自定义名称与构建信息（Name=Typorax；Comment 含 Typora 版本/free/plugin 版本/构建时间/仓库）
