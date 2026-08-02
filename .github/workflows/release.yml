@@ -42,7 +42,8 @@ jobs:
               | grep '"tag_name"' | head -1 | cut -d '"' -f 4)"
           fi
           if [ -z "$PV" ]; then
-            echo "::error::无法确定 typora_plugin 版本"; exit 1
+            echo "::error::无法确定 typora_plugin 版本"
+            exit 1
           fi
           if [ -n "$TAG_INPUT" ]; then
             RT="$TAG_INPUT"
@@ -79,14 +80,16 @@ jobs:
           TAG: ${{ steps.ver.outputs.tag }}
           PV: ${{ steps.ver.outputs.plugin }}
         run: |
+          set -euo pipefail
+          NOTE="Typora 0.11.18（最后一个免费版）集成 typora_plugin v$PV
+
+          - Linux x86_64 / aarch64 AppImage
+          - Windows x64 zip
+          - macOS dmg（原样，未集成 plugin）
+
+          插件配置外置: ~/.config/typora_plugin/
+          沙箱: userns 可用时 --disable-setuid-sandbox，否则 --no-sandbox"
           gh release create "$TAG" \
             build/Typora-*.AppImage build/Typora-*.zip build/Typora-*.dmg \
             --title "Typora 0.11.18 (free) + typora_plugin v$PV" \
-            --notes "Typora 0.11.18 (最后一个免费版) 集成 typora_plugin v$PV
-
-- Linux x86_64 / aarch64 AppImage
-- Windows x64 zip
-- macOS dmg（原样，未集成 plugin）
-
-插件配置外置: ~/.config/typora_plugin/
-沙箱: userns 可用时 --disable-setuid-sandbox，否则 --no-sandbox"
+            --notes "$NOTE"
