@@ -1,0 +1,8 @@
+.vscode/
+
+.claude/
+.reasonix/
+out/
+tmpapps/
+
+.DS_Store

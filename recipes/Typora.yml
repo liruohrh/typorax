@@ -1,0 +1,36 @@
+# Typora 0.11.18（免费版）AppImage 配方
+#
+# 用法：
+#   x86_64:  ./pkg2appimage-*.AppImage Typora.yml
+#   arm64:   ARCH=aarch64 ./pkg2appimage-*.AppImage Typora.yml
+#
+# 产物：out/Typora-0.11.18.glibc2.X-<arch>.AppImage
+#
+# 说明：
+#   - 该 .deb 不声明任何依赖（Depends 为空），且是 Electron 13 应用，
+#     所需的系统库（GTK3 / NSS / ALSA 等）由运行 AppImage 的主机提供，
+#     因此无需 ingredients.dist / apt 拉取依赖。
+#   - Electron 的 SUID 沙箱在 AppImage 中无法工作（FUSE 挂载通常为
+#     nosuid），所以自定义 AppRun 以 --no-sandbox 启动，这是
+#     Chromium/Electron 类 AppImage 的通行做法。
+#   - Electron 二进制按自身路径解析 resources/、locales/ 等资源，
+#     不需要 binpatch: true。
+
+app: Typora
+
+ingredients:
+  # 下载与目标架构匹配的 deb（amd64 / arm64）。
+  # 通过 ARCH 环境变量指定目标架构（见上方用法），未设置时按本机架构。
+  script:
+    - case "${ARCH:-$(uname -m)}" in x86_64|amd64) DARCH="amd64" ;; aarch64|arm64) DARCH="arm64" ;; *) echo "Unsupported architecture: ${ARCH:-$(uname -m)}" >&2; exit 1 ;; esac; wget -c "https://github.com/wyf9661/typora-free/releases/download/v0.11.18/typora_0.11.18_${DARCH}.deb"
+
+script:
+  # 覆盖 pkg2appimage 下载的默认 AppRun，用 --no-sandbox 启动 Typora。
+  # 二进制位于 usr/share/typora/Typora（由 deb 解包得到）。
+  - cat > ./AppRun <<\EOF
+  - #!/bin/sh
+  - HERE="$(dirname "$(readlink -f "${0}")")"
+  - export LD_LIBRARY_PATH="${HERE}"/usr/lib:"${HERE}"/usr/lib/x86_64-linux-gnu:"${HERE}"/usr/lib/aarch64-linux-gnu:"${LD_LIBRARY_PATH}"
+  - exec "${HERE}"/usr/share/typora/Typora --no-sandbox "$@"
+  - EOF
+  - chmod a+x ./AppRun
