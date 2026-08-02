@@ -6,3 +6,5 @@ out/
 tmpapps/
 
 .DS_Store
+apps/
+build/

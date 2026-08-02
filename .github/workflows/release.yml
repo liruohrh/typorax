@@ -1,0 +1,91 @@
+name: Build & Release
+
+on:
+  schedule:
+    # 每小时检查 typora_plugin 是否有新 release，有则自动构建发布
+    - cron: '30 * * * *'
+  workflow_dispatch:
+    inputs:
+      plugin_version:
+        description: 'typora_plugin 版本（如 1.19.0；留空 = 自动检测最新 release）'
+        required: false
+        type: string
+      release_tag:
+        description: '自定义 release tag（如 vplugin1.19.0；留空 = 自动 vplugin{版本}）'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: 确定 plugin 版本与 release tag
+        id: ver
+        env:
+          PLUGIN_INPUT: ${{ github.event.inputs.plugin_version }}
+          TAG_INPUT: ${{ github.event.inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          if [ -n "$PLUGIN_INPUT" ]; then
+            PV="$PLUGIN_INPUT"
+          else
+            PV="$(curl -s https://api.github.com/repos/obgnail/typora_plugin/releases/latest \
+              | grep '"tag_name"' | head -1 | cut -d '"' -f 4)"
+          fi
+          if [ -z "$PV" ]; then
+            echo "::error::无法确定 typora_plugin 版本"; exit 1
+          fi
+          if [ -n "$TAG_INPUT" ]; then
+            RT="$TAG_INPUT"
+          else
+            RT="vplugin${PV}"
+          fi
+          echo "plugin=$PV" >> "$GITHUB_OUTPUT"
+          echo "tag=$RT" >> "$GITHUB_OUTPUT"
+          echo "typora_plugin 版本: $PV  ->  release tag: $RT"
+
+      - name: 检查该 tag 是否已发布
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.ver.outputs.tag }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "已存在 release $TAG，跳过"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 构建（build.sh，产物到 build/）
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          bash ./build.sh "${{ steps.ver.outputs.plugin }}"
+        timeout-minutes: 60
+
+      - name: 发布 release
+        if: steps.check.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.ver.outputs.tag }}
+          PV: ${{ steps.ver.outputs.plugin }}
+        run: |
+          gh release create "$TAG" \
+            build/Typora-*.AppImage build/Typora-*.zip build/Typora-*.dmg \
+            --title "Typora 0.11.18 (free) + typora_plugin v$PV" \
+            --notes "Typora 0.11.18 (最后一个免费版) 集成 typora_plugin v$PV
+
+- Linux x86_64 / aarch64 AppImage
+- Windows x64 zip
+- macOS dmg（原样，未集成 plugin）
+
+插件配置外置: ~/.config/typora_plugin/
+沙箱: userns 可用时 --disable-setuid-sandbox，否则 --no-sandbox"
