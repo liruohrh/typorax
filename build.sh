@@ -28,7 +28,7 @@ TOOLS="$TMP/tools"
 BUILD="$ROOT/build"
 ARCHIVES="$ROOT/freearchives"
 VER_TYPORA="0.11.18"
-REPO_URL="git@github.com:liruohrh/typorax.git"
+REPO_URL="https://github.com/liruohrh/typorax"
 BUILD_TIME="$(date -u +'%Y-%m-%d %H:%M UTC')"
 
 # ---------- 参数解析 ----------
